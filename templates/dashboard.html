@@ -1,0 +1,53 @@
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Welcome, {{ user }}</h2>
+
+<div class="card">
+    <h3>Resume Analyzer</h3>
+    <form method="post" enctype="multipart/form-data">
+        <textarea name="resume" placeholder="Paste your resume text here..."></textarea>
+        <p>OR upload file</p>
+        <input type="file" name="file">
+        <input name="role" placeholder="Enter the role you are applying for...">
+        <button type="submit">Analyze</button>
+    </form>
+</div>
+
+{% if result %}
+<div class="analysis-results">
+    {% if result.error %}
+        <p style="color: red;">Error: {{ result.error }}</p>
+    {% endif %}
+
+    <h3>Skills Analysis</h3>
+    <ul>
+        {% for skill in result.get('skills', []) %}
+            <li>{{ skill }}</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Missing Skills</h3>
+    <ul>
+        {% for skill in result.get('missing_skills', []) %}
+            <li>{{ skill }}</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Roadmap</h3>
+    <ul>
+        {% for step in result.get('roadmap', []) %}
+            <li>{{ step }}</li>
+        {% endfor %}
+    </ul>
+
+    <h3>Interview Preparation</h3>
+    <ul>
+        {% for tip in result.get('interview_tips', []) %}
+            <li>{{ tip }}</li>
+        {% endfor %}
+    </ul>
+</div>
+{% endif %}
+
+{% endblock %}

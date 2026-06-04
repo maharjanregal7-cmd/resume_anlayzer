@@ -1,0 +1,1 @@
+install flask sqlalchemy(for database handling) pymsql(to connect to TIBD) openai(for chatgpt) PyPDF2(to read pd file) python-docx(to read msword file)
