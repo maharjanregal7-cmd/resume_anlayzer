@@ -1,7 +1,14 @@
 from openai import OpenAI
 import json
 
-client = OpenAI()
+_client = None
+
+
+def get_client():
+    global _client
+    if _client is None:
+        _client = OpenAI()
+    return _client
 
 
 def analyze_resume(resume_text, user_goal):
@@ -27,7 +34,7 @@ def analyze_resume(resume_text, user_goal):
     """
 
     try:
-        response = client.chat.completions.create(
+        response = get_client().chat.completions.create(
             model="gpt-4o",
             # Note: response_format ensures the model actually returns valid JSON
             response_format={"type": "json_object"},

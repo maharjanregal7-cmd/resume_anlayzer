@@ -20,12 +20,10 @@
         <p style="color: red;">Error: {{ result.error }}</p>
     {% endif %}
 
-    <h3>Skills Analysis</h3>
-    <ul>
-        {% for skill in result.get('skills', []) %}
-            <li>{{ skill }}</li>
-        {% endfor %}
-    </ul>
+    {% if result.feedback %}
+    <h3>Feedback</h3>
+    <p>{{ result.feedback }}</p>
+    {% endif %}
 
     <h3>Missing Skills</h3>
     <ul>
@@ -34,19 +32,17 @@
         {% endfor %}
     </ul>
 
-    <h3>Roadmap</h3>
+    <h3>Additional Sections</h3>
     <ul>
-        {% for step in result.get('roadmap', []) %}
-            <li>{{ step }}</li>
+        {% for section in result.get('additional_sections', []) %}
+            <li>{{ section }}</li>
         {% endfor %}
     </ul>
 
-    <h3>Interview Preparation</h3>
-    <ul>
-        {% for tip in result.get('interview_tips', []) %}
-            <li>{{ tip }}</li>
-        {% endfor %}
-    </ul>
+    {% if result.tailoring_advice %}
+    <h3>Tailoring Advice</h3>
+    <p>{{ result.tailoring_advice }}</p>
+    {% endif %}
 </div>
 {% endif %}
 

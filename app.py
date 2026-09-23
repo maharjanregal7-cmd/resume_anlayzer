@@ -1,12 +1,20 @@
+import os
+
+from dotenv import load_dotenv
 from flask import Flask, render_template, request, redirect, session
+from werkzeug.security import check_password_hash, generate_password_hash
+
 import models
 import PyPDF2
 import docx
 import json
 from db import Base, engine, SessionLocal
+from ai import analyze_resume
+
+load_dotenv()
 
 app = Flask(__name__)
-app.secret_key = "secretkey123"
+app.secret_key = os.getenv("SECRET_KEY", "dev-secret-change-me")
 
 Base.metadata.create_all(bind=engine)
 
@@ -23,35 +31,63 @@ def home():
 @app.route("/signup", methods=["GET", "POST"])
 def signup():
     db = SessionLocal()
-    if request.method == "POST":
-        email = request.form.get("email")
-        password = request.form.get("password")
+    try:
+        if request.method == "POST":
+            email = request.form.get("email")
+            password = request.form.get("password")
 
-        existing_user = db.query(models.User).filter_by(email=email).first()
-        if existing_user:
-            return "User already exists"
+            existing_user = db.query(models.User).filter_by(email=email).first()
+            if existing_user:
+                return "User already exists"
 
-        new_user = models.User(email=email, password=password)
-        db.add(new_user)
-        db.commit()
-        return redirect("/login")
-    return render_template("signup.html")
+            new_user = models.User(email=email, password=generate_password_hash(password))
+            db.add(new_user)
+            db.commit()
+            return redirect("/login")
+        return render_template("signup.html")
+    finally:
+        db.close()
+
+
+def validate_login(db, email, password):
+    """Check credentials, auto-migrating legacy plaintext passwords to hashes."""
+    user = db.query(models.User).filter_by(email=email).first()
+    if not user:
+        return None
+
+    stored = user.password or ""
+    if "$" in stored:
+        # Already hashed (werkzeug format: method$...$...)
+        try:
+            return user if check_password_hash(stored, password) else None
+        except ValueError:
+            return None
+    else:
+        # Legacy plaintext stored before password hashing was added
+        if stored == password:
+            user.password = generate_password_hash(password)
+            db.commit()
+            return user
+        return None
 
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
     db = SessionLocal()
-    if request.method == "POST":
-        email = request.form.get("email")
-        password = request.form.get("password")
+    try:
+        if request.method == "POST":
+            email = request.form.get("email")
+            password = request.form.get("password")
 
-        user = db.query(models.User).filter_by(email=email, password=password).first()
-        if user:
-            session["user"] = user.email
-            return redirect("/dashboard")
-        else:
-            return "Invalid credentials"
-    return render_template("login.html")
+            user = validate_login(db, email, password)
+            if user:
+                session["user"] = user.email
+                return redirect("/dashboard")
+            else:
+                return "Invalid credentials"
+        return render_template("login.html")
+    finally:
+        db.close()
 
 
 @app.route("/dashboard", methods=["GET", "POST"])
@@ -94,16 +130,18 @@ def dashboard():
 
                 # 3. Save to Database
                 db = SessionLocal()
-                user = db.query(models.User).filter_by(email=session["user"]).first()
+                try:
+                    user = db.query(models.User).filter_by(email=session["user"]).first()
 
-                report = models.Report(
-                    user_id=user.id,
-                    resume_text=resume_text,
-                    result=json.dumps(result),  # Store as string
-                )
-                db.add(report)
-                db.commit()
-                db.close()
+                    report = models.Reports(
+                        user_id=user.id,
+                        resume_text=resume_text,
+                        result=json.dumps(result),  # Store as string
+                    )
+                    db.add(report)
+                    db.commit()
+                finally:
+                    db.close()
             except Exception as e:
                 result = {"error": f"Analysis error: {str(e)}"}
 
@@ -118,7 +156,7 @@ def history():
     db = SessionLocal()
     user = db.query(models.User).filter_by(email=session["user"]).first()
     # Fetch reports for this specific user
-    reports = db.query(models.Report).filter_by(user_id=user.id).all()
+    reports = db.query(models.Reports).filter_by(user_id=user.id).all()
 
     for r in reports:
         try:

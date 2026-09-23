@@ -5,37 +5,39 @@
 {% for r in reports %}
     <div class="card">
         <p><strong>Resume Preview:</strong></p>
-        <p>{{ r.resume[:150] }}</p>
+        <p>{{ (r.resume or '')[:150] }}</p>
 
         <hr>
 
-         <h3>Skills Analysis</h3>
-    <ul>
-        {% for skill in result.get('skills', []) %}
-            <li>{{ skill }}</li>
-        {% endfor %}
-    </ul>
+        {% if not r.result_json %}
+            <p>No result data available.</p>
+        {% elif r.result_json.error %}
+            <p style="color: red;">Error: {{ r.result_json.error }}</p>
+        {% else %}
+            {% if r.result_json.feedback %}
+            <h3>Feedback</h3>
+            <p>{{ r.result_json.feedback }}</p>
+            {% endif %}
 
-    <h3>Missing Skills</h3>
-    <ul>
-        {% for skill in result.get('missing_skills', []) %}
-            <li>{{ skill }}</li>
-        {% endfor %}
-    </ul>
+            <h3>Missing Skills</h3>
+            <ul>
+                {% for skill in r.result_json.get('missing_skills', []) %}
+                    <li>{{ skill }}</li>
+                {% endfor %}
+            </ul>
 
-    <h3>Roadmap</h3>
-    <ul>
-        {% for step in result.get('roadmap', []) %}
-            <li>{{ step }}</li>
-        {% endfor %}
-    </ul>
+            <h3>Additional Sections</h3>
+            <ul>
+                {% for section in r.result_json.get('additional_sections', []) %}
+                    <li>{{ section }}</li>
+                {% endfor %}
+            </ul>
 
-    <h3>Interview Preparation</h3>
-    <ul>
-        {% for tip in result.get('interview_tips', []) %}
-            <li>{{ tip }}</li>
-        {% endfor %}
-    </ul>
+            {% if r.result_json.tailoring_advice %}
+            <h3>Tailoring Advice</h3>
+            <p>{{ r.result_json.tailoring_advice }}</p>
+            {% endif %}
+        {% endif %}
 
     </div>
 {% endfor %}
